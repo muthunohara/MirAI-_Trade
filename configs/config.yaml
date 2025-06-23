@@ -1,0 +1,22 @@
+logging:
+  level: INFO
+  log_dir: logs
+  format: "%(asctime)s [%(levelname)s] %(message)s"
+
+jquants:
+  auth:
+    email: ${JQ_EMAIL}
+    password: ${JQ_PASSWORD}
+  endpoints:
+    token_auth_user: https://api.jquants.com/v1/token/auth_user
+    token_auth_refresh: https://api.jquants.com/v1/token/auth_refresh
+    trading_calendar: https://api.jquants.com/v1/markets/trading_calendar
+    daily_quotes: https://api.jquants.com/v1/prices/daily_quotes
+    listed_info: https://api.jquants.com/v1/listed/info
+
+database:
+  host: ${DB_HOST}
+  port: ${DB_PORT}
+  name: ${DB_NAME}
+  user: ${DB_USER}
+  password: ${DB_PASSWORD}
