@@ -85,7 +85,9 @@ def score_up(
     merged["Momentum_2_pos"] = merged["Momentum_2"].clip(lower=0)
 
     # --- 10 % 急騰・急落を除外 ---
-    merged["OneDayRet"] = merged.groupby("Code")["Close"].pct_change()
+    merged["OneDayRet"] = (
+        merged.groupby("Code")["Close"].pct_change(fill_method=None)
+    )
     spike_mask = merged["OneDayRet"].abs() >= 0.10   # ±10 % 以上
     merged.loc[spike_mask, needed_cols] = 0
     # ------------------------------
