@@ -84,6 +84,12 @@ def score_up(
     # Momentum_2 が負なら 0
     merged["Momentum_2_pos"] = merged["Momentum_2"].clip(lower=0)
 
+    # --- 10 % 急騰・急落を除外 ---
+    merged["OneDayRet"] = merged.groupby("Code")["Close"].pct_change()
+    spike_mask = merged["OneDayRet"].abs() >= 0.10   # ±10 % 以上
+    merged.loc[spike_mask, needed_cols] = 0
+    # ------------------------------
+    
     # スコア計算
     merged["Score_up"] = (
         (merged["Vol_5"] / merged["Vol_20"]) ** a *
