@@ -20,3 +20,5 @@ database:
   name: ${DB_NAME}
   user: ${DB_USER}
   password: ${DB_PASSWORD}
+
+BACKTEST_N_JOBS: 16        # Ryzen 9 5950X 推奨値

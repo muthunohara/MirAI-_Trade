@@ -11,9 +11,14 @@
 from __future__ import annotations
 
 from itertools import product
+from joblib import Parallel, delayed
+import os
 from pathlib import Path
 import pandas as pd
 from logging import getLogger, basicConfig, WARNING
+
+import yaml              # ← まだ無ければ追加
+
 
 from app.core.config import load_config
 from app.data.jquants_signin import get_refresh_token, get_id_token
@@ -47,6 +52,42 @@ FINE_TOPN   = [10, 12]
 
 # ------------------------------- ヘルパ ---------------------------------- #
 
+# --------------------------------------------------------------
+# 並列数を自動決定（config.yaml > 物理コア）
+# --------------------------------------------------------------
+def _suggest_n_jobs() -> int:
+    """
+    Ryzen 9 5950X 用 推奨並列数を返す。
+
+    1. configs/config.yaml に BACKTEST_N_JOBS があればそれを優先
+    2. 無ければ物理コア数（16）を利用
+    """
+    try:
+        with open("configs/config.yaml", "r", encoding="utf-8") as f:
+            raw = yaml.safe_load(f) or {}
+            if "BACKTEST_N_JOBS" in raw and raw["BACKTEST_N_JOBS"]:
+                return int(raw["BACKTEST_N_JOBS"])
+    except FileNotFoundError:
+        pass  # ファイルが無ければ物理コアで代用
+
+    logical = os.cpu_count() or 1        # 5950X は 32 論理
+    return logical // 2 or 1             # 16 物理。最低でも 1
+
+# --------------------------------------------------------------
+# Helper wrappers for joblib (need top‑level picklable funcs)
+# --------------------------------------------------------------
+def _run_backtest_coarse(price_df, info_df, c, d, top):
+    res = run_backtest(price_df, info_df, (1, 1, c, d), top)
+    m   = calc_metrics(res["Ret"])
+    m.update({"a": 1, "b": 1, "c": c, "d": d, "TopN": top})
+    return m
+
+def _run_backtest_fine(price_df, info_df, a, b, c, d, top):
+    res = run_backtest(price_df, info_df, (a, b, c, d), top)
+    m   = calc_metrics(res["Ret"])
+    m.update({"a": a, "b": b, "c": c, "d": d, "TopN": top})
+    return m
+
 def _meets_threshold(m: dict[str, float]) -> bool:
     return (
         m["mu"] >= THRESHOLDS["mu"] and
@@ -71,22 +112,22 @@ def main() -> None:
     best = None  # type: dict[str, float] | None
 
     # --- Step A: 粗探索 (c,d) ------------------------------------------ #
-    coarse_results = []
-    for c, d, top in product(COARSE_C, COARSE_D, COARSE_TOPN):
-        res = run_backtest(price_df, info_df, (1, 1, c, d), top)
-        metrics = calc_metrics(res["Ret"])
-        metrics.update({"a": 1, "b": 1, "c": c, "d": d, "TopN": top})
-        coarse_results.append(metrics)
+    n_jobs = _suggest_n_jobs()
+    coarse_results = Parallel(n_jobs=n_jobs, verbose=10)(
+        delayed(_run_backtest_coarse)(price_df, info_df, c, d, top)
+        for c, d, top in product(COARSE_C, COARSE_D, COARSE_TOPN)
+    )
     coarse_sorted = sorted(coarse_results, key=lambda x: x["sharpe"], reverse=True)[:3]
 
     # --- Step B: 細探索 (a,b) ------------------------------------------ #
     fine_results = []
     for param in coarse_sorted:
         c, d = param["c"], param["d"]
-        for a, b, top in product(FINE_A, FINE_B, FINE_TOPN):
-            res = run_backtest(price_df, info_df, (a, b, c, d), top)
-            m = calc_metrics(res["Ret"])
-            m.update({"a": a, "b": b, "c": c, "d": d, "TopN": top})
+        fine_batch = Parallel(n_jobs=n_jobs, verbose=10)(
+            delayed(_run_backtest_fine)(price_df, info_df, a, b, c, d, top)
+            for a, b, top in product(FINE_A, FINE_B, FINE_TOPN)
+        )
+        for m in fine_batch:
             fine_results.append(m)
             if _meets_threshold(m):
                 if best is None or m["sharpe"] > best["sharpe"]:
