@@ -59,7 +59,7 @@ def run_backtest(
         day_df = price_df[price_df["Date"] == trade_day]
         open_px = day_df.set_index("Code")["Open"].reindex(picks)
         close_px = day_df.set_index("Code")["Close"].reindex(picks)
-        ret = ((close_px - open_px) / open_px).mean() - 0.002  # 往復 0.2 %
+        ret = ((close_px - open_px) / open_px).mean() - 0.001   # 0.1 %
 
         results.append({"Date": trade_day, "Ret": round(ret, 4)})
 

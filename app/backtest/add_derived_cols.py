@@ -39,7 +39,7 @@ def add_derived_cols(df: pd.DataFrame) -> pd.DataFrame:
         grp["Volume"].rolling(5, min_periods=5).mean().reset_index(level=0, drop=True)
     )
     df["Vol_20"] = (
-        grp["Volume"].rolling(20, min_periods=20).mean().reset_index(level=0, drop=True)
+        grp["Volume"].rolling(20, min_periods=10).mean().reset_index(level=0, drop=True)
     )
 
     # ATR 系
@@ -48,7 +48,7 @@ def add_derived_cols(df: pd.DataFrame) -> pd.DataFrame:
         grp["ATR_1"].rolling(5, min_periods=5).mean().reset_index(level=0, drop=True)
     )
     df["ATR_20"] = (
-        grp["ATR_1"].rolling(20, min_periods=20).mean().reset_index(level=0, drop=True)
+        grp["ATR_1"].rolling(20, min_periods=10).mean().reset_index(level=0, drop=True)
     )
 
     # Momentum_2
