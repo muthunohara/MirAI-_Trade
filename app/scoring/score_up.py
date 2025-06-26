@@ -79,7 +79,7 @@ def score_up(
 
     # NaN を落とす
     needed_cols = ["Vol_5", "Vol_20", "ATR_5", "ATR_20", "Momentum_2", "PullUp"]
-    merged = merged.dropna(subset=needed_cols)
+    merged[needed_cols] = merged[needed_cols].fillna(0)
 
     # Momentum_2 が負なら 0
     merged["Momentum_2_pos"] = merged["Momentum_2"].clip(lower=0)
