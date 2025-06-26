@@ -42,14 +42,15 @@ THRESHOLDS = {
 }
 
 # ------------------------------- グリッド定義 ----------------------------- #
-COARSE_C    = [0.6,0.8,1.0,1.2,1.4,1.6,1.8,2.0,2.4,2.8]
-COARSE_D    = [0.4,0.6,0.8,1.0,1.2,1.4,1.6,1.8]
-COARSE_TOPN = [10, 12, 15]
+COARSE_C    = [1.0, 1.2, 1.4, 1.6]        # 0.6–0.8 / ≥1.8 を除外
+COARSE_D    = [1.0, 1.2, 1.4, 1.6]        # D も同幅で合わせる
+COARSE_TOPN = [10, 15, 20]                # 12 を残し、40 以上は排除
 
-FINE_A = [0.8, 0.9, 1.0, 1.1, 1.2]
-FINE_B = [0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4]
-FINE_TOPN   = [10, 12]
-
+FINE_A   = [0.7, 0.9, 1.1, 1.3]
+FINE_B   = [0.7, 0.9, 1.1, 1.3]
+FINE_C    = [1.0, 1.1, 1.2, 1.3]      # 追加：低めのボラ係数
+FINE_D    = [1.0, 1.1, 1.2, 1.3]      # 追加：低めのボラ係数
+FINE_TOPN = [8, 10, 12]
 # ------------------------------- ヘルパ ---------------------------------- #
 
 # --------------------------------------------------------------
@@ -102,7 +103,12 @@ def main() -> None:
     if not INPUT_CSV.exists():
         logger.error("Derived CSV not found: %s", INPUT_CSV)
         return
-    price_df = pd.read_csv(INPUT_CSV, parse_dates=["Date"])
+    price_df = pd.read_csv(
+        INPUT_CSV,
+        dtype={"Code": "str"},      # ← 文字列で読み込む
+        parse_dates=["Date"],
+        low_memory=False            # ← mixed-dtype 警告回避
+    )
 
     cfg = load_config("configs/config.yaml")
     refresh = get_refresh_token(cfg, logger)

@@ -46,6 +46,13 @@ def run_backtest(
     unique_days = sorted(price_df["Date"].unique())
     trade_days = unique_days[-90:]
 
+    # ── 出来高 & ボラティリティ フィルタ ──────────────────────
+    price_df = price_df[
+        (price_df["Vol_20"] > 5e5) &                         # 20日平均出来高 50万株超
+        (price_df["ATR_20"] / price_df["Close"] < 0.08)      # 変動率 8％ 未満
+    ]
+    # --------------------------------------------------------------
+
     results = []
     for trade_day in trade_days:
         prev_day = max(d for d in unique_days if d < trade_day)
@@ -59,7 +66,7 @@ def run_backtest(
         day_df = price_df[price_df["Date"] == trade_day]
         open_px = day_df.set_index("Code")["Open"].reindex(picks)
         close_px = day_df.set_index("Code")["Close"].reindex(picks)
-        ret = ((close_px - open_px) / open_px).mean() - 0.001   # 0.1 %
+        ret = ((close_px - open_px) / open_px).mean() - 0.0005   # 0.05 %
 
         results.append({"Date": trade_day, "Ret": round(ret, 4)})
 

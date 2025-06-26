@@ -22,7 +22,11 @@ class JQuantsEndpointsConfig(BaseModel):
     trading_calendar: str
     daily_quotes: str
     listed_info: str
-
+    futures_prices: str
+    weekly_margin_interest: str
+    short_selling_positions: str
+    trades_spec: str
+    
 # J-Quants全体の設定
 class JQuantsConfig(BaseModel):
     auth: JQuantsAuthConfig
