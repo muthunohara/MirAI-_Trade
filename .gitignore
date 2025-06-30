@@ -7,4 +7,5 @@ exports/
 *.pyo
 .DS_Store
 backtest_data/price_ohlcv_derived.csv
+backtest_data/
 backtest_results/
