@@ -11,7 +11,7 @@ make_premium_pickle.py
 """
 
 from logging import basicConfig, getLogger
-from datetime import date
+from datetime import date, timedelta          # ← timedelta を追加
 import pickle, pathlib, pandas as pd
 
 from app.core.config import load_config                      # ← 変更①
@@ -25,8 +25,9 @@ cfg = load_config("configs/config.yaml")                     # ← 変更②
 refresh = get_refresh_token(cfg, log)                        # ← 変更③
 id_tok  = get_id_token(cfg, refresh, log)
 
+start = date.today() - timedelta(days=90)     # ← ここを 90 日前に短縮
 dfs = []
-for d in pd.date_range("2024-01-01", date.today(), freq="B"):
+for d in pd.date_range(start, date.today(), freq="B"):
     res = fetch_premium_temp(cfg, id_tok, log, d.strftime("%Y-%m-%d"))
     for k, df in res.items():
         if df.empty:

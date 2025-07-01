@@ -19,7 +19,14 @@ def _call(cfg: AppConfig, id_tok: str, lg: Logger,
     if r.status_code != 200:
         lg.error(f"{url_key} 失敗 {r.status_code}: {r.text[:120]}")
         raise RuntimeError(f"{url_key} API error")
-    return pd.DataFrame(r.json().get(url_key, []))
+    # 先物だけトップキーが "futures"
+    key = "futures" if url_key == "futures_prices" else url_key
+    df = pd.DataFrame(r.json().get(key, []))\
+    
+    if key == "futures":                       # ← key で判定
+        df = df[["Date", "DerivativesProductCategory",   # ← ここを含める
+                 "SettlementPrice", "Volume"]]
+    return df
 
 # ---------- 公開関数 ----------
 def fetch_premium_temp(cfg: AppConfig, id_tok: str,

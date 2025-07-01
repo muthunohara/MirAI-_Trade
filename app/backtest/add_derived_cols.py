@@ -67,7 +67,7 @@ def add_derived_cols(df: pd.DataFrame) -> pd.DataFrame:
     if pkl.exists():
         prem = pickle.load(pkl.open("rb"))
         fut  = prem.loc[prem["src"] == "futures"]
-        nk225 = fut.query("DerivativeProductCategory == 'NK225F'")
+        nk225 = fut.query("DerivativesProductCategory == 'NK225F'")
         nk225 = nk225[["Date", "SettlementPrice"]].rename(
                     columns={"SettlementPrice": "NK225_settle"})
         nk225["NK225_gap"] = nk225["NK225_settle"].pct_change()
@@ -112,7 +112,6 @@ def add_derived_cols(df: pd.DataFrame) -> pd.DataFrame:
     )
 
     # ===== プレミアム列マージ ここから =====
-    import pickle, pathlib
     pfile = pathlib.Path("backtest_data/premium_data.pkl")
     if pfile.exists():
         prem = pickle.load(pfile.open("rb"))
