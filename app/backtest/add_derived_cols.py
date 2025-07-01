@@ -11,6 +11,8 @@ app/backtest/add_derived_cols.py
 from pathlib import Path
 import pandas as pd
 from logging import getLogger, basicConfig, INFO
+import pathlib
+import pickle
 
 INPUT_CSV = Path("backtest_data/price_ohlcv.csv")
 OUTPUT_CSV = Path("backtest_data/price_ohlcv_derived.csv")
@@ -56,6 +58,38 @@ def add_derived_cols(df: pd.DataFrame) -> pd.DataFrame:
     df["Close_shift2"] = grp["Close"].shift(2)
     df["Momentum_2"] = (df["Close_shift1"] / df["Close_shift2"] - 1).round(6)
 
+    # Momentum_3  ←★ 追加
+    df["Close_shift3"] = grp["Close"].shift(3)
+    df["Momentum_3"] = (df["Close_shift1"] / df["Close_shift3"] - 1).round(6)
+
+    # ----- NK225F 清算値ギャップを日付インデックスで結合 -----
+    pkl = pathlib.Path("backtest_data/premium_data.pkl")
+    if pkl.exists():
+        prem = pickle.load(pkl.open("rb"))
+        fut  = prem.loc[prem["src"] == "futures"]
+        nk225 = fut.query("DerivativesProductCategory == 'NK225F'")
+        nk225 = nk225[["Date", "SettlementPrice"]].rename(
+                    columns={"SettlementPrice": "NK225_settle"})
+        nk225["NK225_gap"] = nk225["NK225_settle"].pct_change()
+        df = df.merge(nk225[["Date", "NK225_gap"]], on="Date", how="left")
+    # -------------------------------------------------------------
+
+    # ★ ここから追加
+    df["MA_5"] = grp["Close"].rolling(5, min_periods=5).mean().reset_index(level=0, drop=True)
+    # ★ ここまで追加
+
+    # ★ この1行を追加
+    df["Range_yesterday"] = grp["ATR_1"].shift(1).round(4)
+
+    # ---------- ここから追加 ----------
+    # 当日寄りギャップ率（Open ÷ 前日 Close − 1）
+    df["GapPct"] = (df["Open"] / grp["Close"].shift(1) - 1).round(4)
+    
+    # 連日ボラ係数（ATR_3, ATR_10）
+    df["ATR_3"]  = grp["ATR_1"].rolling(3,  min_periods=3).mean().reset_index(level=0, drop=True)
+    df["ATR_10"] = grp["ATR_1"].rolling(10, min_periods=10).mean().reset_index(level=0, drop=True)
+    # ---------- ここまで追加 ----------
+
     # PullUp
     df["High_shift1"] = grp["High"].shift(1)
     df["Low_shift1"] = grp["Low"].shift(1)
@@ -70,11 +104,24 @@ def add_derived_cols(df: pd.DataFrame) -> pd.DataFrame:
         columns=[
             "Close_shift1",
             "Close_shift2",
+            "Close_shift3",   # ← Momentum_3 で使ったシフト列も削除
             "High_shift1",
             "Low_shift1",
         ],
         inplace=True,
     )
+
+    # ===== プレミアム列マージ ここから =====
+    pfile = pathlib.Path("backtest_data/premium_data.pkl")
+    if pfile.exists():
+        prem = pickle.load(pfile.open("rb"))
+        prem = prem.pivot_table(index=["Date","Code"],
+                                columns="src", values="SettlementPrice").reset_index()
+        df = df.merge(prem, on=["Date","Code"], how="left")
+        df["LongShortRatio"] = prem.groupby("Date")["margin"].transform("mean")
+        df["ShortInc"]       = prem.groupby("Date")["short"].transform("mean").pct_change()
+        df["ForeignFlow3"]   = prem.groupby("Date")["trades"].transform("mean").rolling(3).mean()
+    # ===== プレミアム列マージ ここまで =====
 
     return df
 

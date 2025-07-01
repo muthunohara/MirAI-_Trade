@@ -13,7 +13,11 @@ jquants:
     trading_calendar: https://api.jquants.com/v1/markets/trading_calendar
     daily_quotes: https://api.jquants.com/v1/prices/daily_quotes
     listed_info: https://api.jquants.com/v1/listed/info
-
+    futures_prices: https://api.jquants.com/v1/derivatives/futures
+    weekly_margin_interest: https://api.jquants.com/v1/markets/weekly_margin_interest
+    short_selling_positions: https://api.jquants.com/v1/markets/short_selling_positions
+    trades_spec: https://api.jquants.com/v1/markets/trades_spec
+  
 database:
   host: ${DB_HOST}
   port: ${DB_PORT}

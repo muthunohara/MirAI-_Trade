@@ -78,11 +78,12 @@ def score_up(
     merged = merged[~(is_etf | is_reit)].copy()
 
     # NaN を落とす
-    needed_cols = ["Vol_5", "Vol_20", "ATR_5", "ATR_20", "Momentum_2", "PullUp"]
+    needed_cols = ["Vol_5", "Vol_20", "ATR_5", "ATR_20", "Momentum_3", "PullUp"]
     merged[needed_cols] = merged[needed_cols].fillna(0)
 
-    # Momentum_2 が負なら 0
-    merged["Momentum_2_pos"] = merged["Momentum_2"].clip(lower=0)
+    # --- 追加ここから ---
+    merged["Momentum_3_pos"] = merged["Momentum_3"].clip(lower=0)
+    # --- 追加ここまで ---
 
     # --- 10 % 急騰・急落を除外 ---
     merged["OneDayRet"] = (
@@ -94,10 +95,14 @@ def score_up(
     
     # スコア計算
     merged["Score_up"] = (
-        (merged["Vol_5"] / merged["Vol_20"]) ** a *
-        (merged["ATR_5"] / merged["ATR_20"]) ** b *
-        (merged["Momentum_2_pos"]) ** c *
-        (merged["PullUp"]) ** d
+    (merged["Vol_5"] / merged["Vol_20"]) *                    # 出来高異常
+    (merged["ATR_5"] / merged["ATR_20"]) *                    # ボラ異常
+    (1 / np.log1p(1 + merged["Range_yesterday"])**2.2) *      # 花火を圧縮
+    (merged["ATR_3"] / merged["ATR_10"]).clip(0.5, 3)**1.6 *  # 連日ボラ加点
+    (1 + (merged["Close"] > merged["MA_5"]).astype(int)) *    # 当日陽線で 2 倍
+    (1 + merged["NK225_gap"].clip(-0.02, 0.02)) *             # 日経225F ギャップ（±2% でクリップ）
+    (merged["Momentum_3_pos"]) ** c *                         # c・d 係数はそのまま
+    (merged["PullUp"] ** 1.5) ** d
     )
 
     merged = merged.replace([np.inf, -np.inf], np.nan).dropna(subset=["Score_up"])
