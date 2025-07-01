@@ -2,6 +2,7 @@
 
 > **日本株スキャルピング／デイトレード向けの 90 日バックテスト & スクリーニングツール**\
 > J‑Quants API + Python 3.12。ソースコードは **GitHub** で一元管理し、ChatGPT にはアップロードしません。
+> **詳細仕様は** [`docs/spec_overview.md`](docs/spec_overview.md) を参照
 
 ---
 
